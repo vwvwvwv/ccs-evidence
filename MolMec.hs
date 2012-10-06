@@ -1,5 +1,6 @@
 import Geometry
 import Data.List (nub, (\\))
+import Data.Maybe (fromJust, isNothing)
 
 data Atom = Atom { pos :: Vector
                  , charge :: Double
@@ -72,17 +73,24 @@ measureBondTorsAngle (BondTorsAngle a a' a'' a''') =
     v'' = pos a''
     v''' = pos a'''
 
+formBondAngle :: Bond -> Bond -> Maybe BondAngle
+formBondAngle b@(Bond u u') b'@(Bond v v') =
+    if null same
+      then Nothing 
+      else let (a':[]) = same
+               (a:a'':[]) = as' \\ [a']
+           in Just $ BondAngle a a' a''
+  where
+    as = [u,u',v,v']
+    as' = nub as
+    same = as' \\ as
+
 collectBondAngles :: [Bond] -> [BondAngle]
 collectBondAngles bonds = 
-    [ BondAngle a a' a'' | 
-      b@(Bond u u') <- bonds, b'@(Bond v v') <- bonds, -- collect our atoms
-      b /= b', -- make sure we aren't looking at only one bond
-      let atoms = nub [u,u',v,v'], -- make a set of our atoms
-      let same = [u,u',v,v'] \\ atoms, -- find the atoms that are the same
-      not $ null same, -- it can't be empty, or else it wouldn't be an angle
-      let a' = head same, -- take the atom
-      let (a:a'':[]) = atoms \\ [a'], -- collect the rest
-      not $ a > a'' ] -- ensure only one true copy of an angle in list
+    [ ba | b@(Bond u u') <- bonds, b'@(Bond v v') <- bonds, b /= b',
+      let mba = formBondAngle b b', not $ isNothing mba,
+      let ba@(BondAngle a _ a'') = fromJust mba,
+      not $ a > a'' ]
 
 totalEnergy :: [Atom] -> [Bond] -> [BondAngle] -> [BondTorsAngle] -> Double
 totalEnergy as bs bas btas = stretch + bend + tors + vdw + elec
@@ -90,5 +98,5 @@ totalEnergy as bs bas btas = stretch + bend + tors + vdw + elec
     stretch = sum . map stretchEnergy $ bs
     bend = sum . map bendEnergy $ bas
     tors = 0 -- must implement collectBondTorsAngles first
-    vdw = sum [ vanDerWaals a a' | a <- as, a' <- as, not a > a' ]
-    elec = sum [ electroStaticEnergy a a' | a <- as, a' <- as, not a > a' ]
+    vdw = sum [ vanDerWaals a a' | a <- as, a' <- as, not $ a > a' ]
+    elec = sum [ electroStaticEnergy a a' | a <- as, a' <- as, not $ a > a' ]
