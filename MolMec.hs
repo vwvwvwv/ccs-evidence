@@ -4,14 +4,18 @@ import Data.List
 data Atom = Atom { pos :: Vector
                  , charge :: Double
                  , radius :: Double
+                 , atomId :: Integer
                  }
           deriving (Show, Eq)
 
 data Bond = Bond Atom Atom
+          deriving (Show, Eq)
 
 data BondAngle = BondAngle Atom Atom Atom
+               deriving (Show, Eq)
 
 data BondTorsAngle = BondTorsAngle Atom Atom Atom Atom
+                   deriving (Show, Eq)
 
 vanDerWaals :: Atom -> Atom -> Double
 vanDerWaals a a' = 4*(r^(-12) - r^(-6))
@@ -64,3 +68,16 @@ measureBondTorsAngle (BondTorsAngle a a' a'' a''') =
     v' = pos a'
     v'' = pos a''
     v''' = pos a'''
+
+collectBondAngles :: [Bond] -> [BondAngle]
+collectBondAngles bonds = 
+    [ BondAngle a a' a'' | 
+      b@(Bond u u') <- bonds, b'@(Bond v v') <- bonds, -- collect our atoms
+      b /= b', -- make sure we aren't looking at only one bond
+      let atoms = nub [u,u',v,v'], -- make a set of our atoms
+      let same = [u,u',v,v'] \\ atoms, -- find the atoms that are the same
+      not $ null same, -- it can't be empty, or else it wouldn't be an angle
+      let a' = head same, -- take the atom
+      let (a:a'':[]) = atoms \\ [a'], -- collect the rest
+      not $ (atomId a)>(atomId a'') ] 
+      -- ensure only one true copy of an angle in list
