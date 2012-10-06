@@ -83,3 +83,12 @@ collectBondAngles bonds =
       let a' = head same, -- take the atom
       let (a:a'':[]) = atoms \\ [a'], -- collect the rest
       not $ a > a'' ] -- ensure only one true copy of an angle in list
+
+totalEnergy :: [Atom] -> [Bond] -> [BondAngle] -> [BondTorsAngle] -> Double
+totalEnergy as bs bas btas = stretch + bend + tors + vdw + elec
+  where
+    stretch = sum . map stretchEnergy $ bs
+    bend = sum . map bendEnergy $ bas
+    tors = 0 -- must implement collectBondTorsAngles first
+    vdw = sum [ vanDerWaals a a' | a <- as, a' <- as, not a > a' ]
+    elec = sum [ electroStaticEnergy a a' | a <- as, a' <- as, not a > a' ]
