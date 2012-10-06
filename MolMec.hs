@@ -8,6 +8,9 @@ data Atom = Atom { pos :: Vector
                  }
           deriving (Show, Eq)
 
+instance Ord Atom where
+  (<=) a a' = (atomId a) <= (atomId a')
+
 data Bond = Bond Atom Atom
           deriving (Show, Eq)
 
@@ -79,5 +82,4 @@ collectBondAngles bonds =
       not $ null same, -- it can't be empty, or else it wouldn't be an angle
       let a' = head same, -- take the atom
       let (a:a'':[]) = atoms \\ [a'], -- collect the rest
-      not $ (atomId a)>(atomId a'') ] 
-      -- ensure only one true copy of an angle in list
+      not $ a > a'' ] -- ensure only one true copy of an angle in list
