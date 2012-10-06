@@ -1,5 +1,5 @@
 import Geometry
-import Data.List
+import Data.List (nub, (\\))
 
 data Atom = Atom { pos :: Vector
                  , charge :: Double
