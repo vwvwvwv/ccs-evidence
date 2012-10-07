@@ -1,5 +1,7 @@
 module Geometry where
 
+import System.Random
+
 data Vector = Vector Double Double Double
             deriving (Show, Eq)
 
@@ -12,6 +14,13 @@ data TorsAngle = TorsAngle Vector Vector Vector Vector
 vector0 :: Vector
 vector0 = Vector 0 0 0
 
+randomVector :: RandomGen g => g -> (Vector, g)
+randomVector g = (Vector r r' r'', g''')
+  where
+    (r, g') = random g
+    (r', g'') = random g'
+    (r'', g''') = random g''
+
 wrapVector :: (Double -> Double -> Double) -> Vector -> Vector -> Vector
 wrapVector f (Vector x x' x'') (Vector y y' y'') = 
     Vector (f x y) (f x' y') (f x'' y'')
@@ -19,7 +28,7 @@ wrapVector f (Vector x x' x'') (Vector y y' y'') =
 (@+) :: Vector -> Vector -> Vector 
 (@+) = wrapVector (+)
 
-(@-) :: Vector -> Vector -> Vector 
+(@-) :: Vector -> Vector -> Vector
 (@-) = wrapVector (-)
 
 (@*) :: Vector -> Vector -> Vector 
