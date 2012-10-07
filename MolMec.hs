@@ -23,6 +23,8 @@ data BondAngle = BondAngle Atom Atom Atom
 data BondTorsAngle = BondTorsAngle Atom Atom Atom Atom
                    deriving (Show, Eq)
 
+type MolecularSystem = ([Atom], [Bond], [BondAngle], [BondTorsAngle])
+
 vanDerWaals :: Atom -> Atom -> Double
 vanDerWaals a a' = if r == 0 then 0 else 4*((1/r)^(12) - (1/r)^(6))
   where
@@ -117,8 +119,8 @@ collectBondTorsAngles bondAngles =
       let bta@(BondTorsAngle a _ _ a''') = fromJust mbta,
       not $ a > a''' ]
 
-totalEnergy :: [Atom] -> [Bond] -> [BondAngle] -> [BondTorsAngle] -> Double
-totalEnergy as bs bas btas = stretch + bend + tors + vdw + elec
+totalEnergy :: MolecularSystem -> Double
+totalEnergy (as, bs, bas, btas) = stretch + bend + tors + vdw + elec
   where
     stretch = sum . map stretchEnergy $ bs
     bend = sum . map bendEnergy $ bas
