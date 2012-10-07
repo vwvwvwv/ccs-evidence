@@ -2,16 +2,15 @@ module Geometry where
 
 import System.Random
 
--- | The Vector data type which this library is based around.
 data Vector = Vector Double Double Double
             deriving (Show, Eq)
 
--- | The Angle data type. The middle vector is always the angle's point.
+-- | The middle vector is always the angle's point.
 data Angle = Angle Vector Vector Vector
             deriving (Show, Eq)
 
--- | The TorsAngle data type for torsional angles, which are essentially two
--- angles that share an edge.
+-- | Represents a torsional angle, which is essentially two angles that share 
+-- an edge.
 data TorsAngle = TorsAngle Vector Vector Vector Vector
             deriving (Show, Eq)
 
@@ -27,7 +26,7 @@ randomVector g = (Vector r r' r'', g''')
     (r', g'') = random g'
     (r'', g''') = random g''
 
--- | Create a function that works on doubles to work on vectors
+-- | Wrap a function that takes doubles to work on vectors
 wrapVector :: (Double -> Double -> Double) -> Vector -> Vector -> Vector
 wrapVector f (Vector x x' x'') (Vector y y' y'') = 
     Vector (f x y) (f x' y') (f x'' y'')

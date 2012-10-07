@@ -15,7 +15,6 @@ data Atom = Atom
 instance Ord Atom where
   (<=) a a' = (atomId a) <= (atomId a')
 
--- | Bonds are created between two atoms.
 data Bond = Bond Atom Atom
           deriving (Show, Eq)
 
@@ -28,8 +27,6 @@ data BondAngle = BondAngle Atom Atom Atom
 data BondTorsAngle = BondTorsAngle Atom Atom Atom Atom
                    deriving (Show, Eq)
 
--- | MolecularSystems hold all current information about the system so that
--- they don't have to be recomputed every time.
 type MolecularSystem = ([Atom], [Bond], [BondAngle], [BondTorsAngle])
 
 -- | Calculate the amount of energy made by through the Van Der-Waals effect
@@ -183,7 +180,7 @@ replaceAtomInBondTorsAngles a a' btas =
                                    let t'' = if u'' == a then a' else u'',
                                    let t''' = if u''' == a then a' else u''']
 
--- | Replace all instances of an Atom in a MolecularSystem.
+-- | Replace all instances of an 'Atom' in a 'MolecularSystem'.
 replaceAtomInMolecularSystem :: Atom -> Atom -> MolecularSystem -> MolecularSystem
 replaceAtomInMolecularSystem a a' (atoms, bonds, bondAngles, bondTorsAngles) =
     (replaceAtomInAtoms a a' atoms,
