@@ -1,5 +1,7 @@
+module MolMec where
+
 import Geometry
-import Data.List (nub, (\\))
+import Data.List (nub, delete, (\\))
 import Data.Maybe (fromJust, isNothing)
 
 data Atom = Atom { pos :: Vector
@@ -22,7 +24,7 @@ data BondTorsAngle = BondTorsAngle Atom Atom Atom Atom
                    deriving (Show, Eq)
 
 vanDerWaals :: Atom -> Atom -> Double
-vanDerWaals a a' = 4*(r^(-12) - r^(-6))
+vanDerWaals a a' = if r == 0 then 0 else 4*((1/r)^(12) - (1/r)^(6))
   where
     r = distance (pos a) (pos a')
 
@@ -123,3 +125,24 @@ totalEnergy as bs bas btas = stretch + bend + tors + vdw + elec
     tors = sum . map torsionalEnergy $ btas
     vdw = sum [ vanDerWaals a a' | a <- as, a' <- as, not $ a > a' ]
     elec = sum [ electroStaticEnergy a a' | a <- as, a' <- as, not $ a > a' ]
+
+replaceAtomInAtoms :: Atom -> Atom -> [Atom] -> [Atom]
+replaceAtomInAtoms a a' as = a':(delete a as)
+
+replaceAtomInBonds :: Atom -> Atom -> [Bond] -> [Bond]
+replaceAtomInBonds a a' bs = [Bond a' a'' | (Bond t t') <- bs, a `elem` [t,t'], 
+                                let a'' = if a == t then t' else t]
+
+replaceAtomInBondAngles :: Atom -> Atom -> [BondAngle] -> [BondAngle]
+replaceAtomInBondAngles a a' bas = [BondAngle t t' t'' | (BondAngle u u' u'') <- bas,
+                                      let t = if u == a then a' else u,
+                                      let t' = if u' == a then a' else u',
+                                      let t'' = if u'' == a then a' else u'']
+
+replaceAtomInBondTorsAngles :: Atom -> Atom -> [BondTorsAngle] -> [BondTorsAngle]
+replaceAtomInBondTorsAngles a a' btas = 
+    [BondTorsAngle t t' t'' t''' | (BondTorsAngle u u' u'' u''') <- btas,
+                                   let t = if u == a then a' else u,
+                                   let t' = if u' == a then a' else u',
+                                   let t'' = if u'' == a then a' else u'',
+                                   let t''' = if u''' == a then a' else u''']
