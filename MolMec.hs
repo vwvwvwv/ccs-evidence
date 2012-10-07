@@ -75,28 +75,51 @@ measureBondTorsAngle (BondTorsAngle a a' a'' a''') =
 
 formBondAngle :: Bond -> Bond -> Maybe BondAngle
 formBondAngle b@(Bond u u') b'@(Bond v v') =
-    if null same
-      then Nothing 
+    if null same then Nothing
       else let (a':[]) = same
                (a:a'':[]) = as' \\ [a']
            in Just $ BondAngle a a' a''
   where
     as = [u,u',v,v']
     as' = nub as
-    same = as' \\ as
+    same = as \\ as'
 
 collectBondAngles :: [Bond] -> [BondAngle]
 collectBondAngles bonds = 
-    [ ba | b@(Bond u u') <- bonds, b'@(Bond v v') <- bonds, b /= b',
+    [ ba | b <- bonds, b' <- bonds, b /= b',
       let mba = formBondAngle b b', not $ isNothing mba,
       let ba@(BondAngle a _ a'') = fromJust mba,
       not $ a > a'' ]
+
+-- not entirely sure if this function works, yet
+formBondTorsAngle :: BondAngle -> BondAngle -> Maybe BondTorsAngle
+formBondTorsAngle b@(BondAngle u u' u'') b'@(BondAngle v v' v'') =
+    if null same then Nothing
+      else let (t:t':[]) = same
+               (a:a''':[]) = as' \\ [t,t']
+           in -- this monstrosity
+             if (t == u && t == v) then Just $ BondTorsAngle u'' u'  v'  v''
+               else if (t == u'' && t == v'') then Just $ BondTorsAngle u'  u'' v'' v'
+                 else if (t == u   && t == v'') then Just $ BondTorsAngle u'' u'  v'' v'
+                   else if (t == u'' && t == v) then Just $ BondTorsAngle u'  u'' v'  v''
+                     else error "Something is terribly wrong in formBondTorsAngle"
+  where
+    as = [u,u',u'',v,v',v'']
+    as' = nub as
+    same = as \\ as'
+
+collectBondTorsAngles :: [BondAngle] -> [BondTorsAngle]
+collectBondTorsAngles bondAngles =
+    [ bta | ba <- bondAngles, ba' <- bondAngles, ba /= ba',
+      let mbta = formBondTorsAngle ba ba', not $ isNothing mbta,
+      let bta@(BondTorsAngle a _ _ a''') = fromJust mbta,
+      not $ a > a''' ]
 
 totalEnergy :: [Atom] -> [Bond] -> [BondAngle] -> [BondTorsAngle] -> Double
 totalEnergy as bs bas btas = stretch + bend + tors + vdw + elec
   where
     stretch = sum . map stretchEnergy $ bs
     bend = sum . map bendEnergy $ bas
-    tors = 0 -- must implement collectBondTorsAngles first
+    tors = sum . map torsionalEnergy $ btas
     vdw = sum [ vanDerWaals a a' | a <- as, a' <- as, not $ a > a' ]
     elec = sum [ electroStaticEnergy a a' | a <- as, a' <- as, not $ a > a' ]
