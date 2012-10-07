@@ -5,37 +5,24 @@ import MolMec
 import System.Random
 import Data.List (delete)
 
-monteCarloStep :: RandomGen g
-               => MolecularSystem -> g
-               -> ((Double, g), MolecularSystem)
-monteCarloStep (atoms, bonds, bondAngles, bondTorsAngles) g =
+type SystemState = ((Double, StdGen), MolecularSystem)
+
+monteCarloStep :: MolecularSystem -> StdGen -> SystemState
+monteCarloStep ms@(atoms,_,_,_) g =
     ((totalEnergy ms', g'), ms')
   where
-    (r,g') = randomR (0, (length atoms)-1) g
+    (r,g')   = randomR (0, (length atoms)-1) g
     (r',g'') = randomVector g'
-    a = atoms !! r
-    a' = a { pos = (pos a) @+ r' }
-    atoms' = replaceAtomInAtoms a a' atoms
-    bonds' = replaceAtomInBonds a a' bonds
-    bondAngles' = replaceAtomInBondAngles a a' bondAngles
-    bondTorsAngles' = replaceAtomInBondTorsAngles a a' bondTorsAngles
-    ms' = (atoms', bonds', bondAngles', bondTorsAngles')
+    a        = atoms !! r
+    a'       = a { pos = (pos a) @+ r' }
+    ms'      = replaceAtomInMolecularSystem a a' ms
 
-monteCarlo :: RandomGen g 
-           => [Atom] 
-           -> [Bond] 
-           -> Integer 
-           -> g 
-           -> (MolecularSystem, g, Double)
-monteCarlo atoms bonds iterations g =
-    loop (atoms,bonds,bondAngles,bondTorsAngles) g iterations
+monteCarlo :: MolecularSystem -> Integer -> StdGen -> SystemState
+monteCarlo ms iterations g =
+    loop ms g iterations
   where
-    bondAngles = collectBondAngles bonds
-    bondTorsAngles = collectBondTorsAngles bondAngles
-    loop :: RandomGen g 
-         => MolecularSystem -> g 
-         -> Integer -> (MolecularSystem, g, Double)
-    loop ms g 0 = (ms, g, totalEnergy ms)
+    loop :: MolecularSystem -> StdGen -> Integer -> SystemState
+    loop ms g 0 = ((totalEnergy ms, g), ms)
     loop ms g n = if (v'-v) < 0 then loop ms' g' (n-1) else loop ms g' (n-1)
       where
         v = totalEnergy ms
@@ -43,8 +30,8 @@ monteCarlo atoms bonds iterations g =
 
 main :: IO ()
 main = do 
-    v <- return $ totalEnergy (atoms,bonds,bondAngles,bondTorsAngles)
-    (ms', _, v') <- return $ monteCarlo atoms bonds 100 (mkStdGen 1234)
+    v <- return $ totalEnergy ms
+    ((v', g'), ms') <- return $ monteCarlo ms 10000 (mkStdGen 1234)
     putStrLn " ----- "
     putStrLn (show v)
     putStrLn (show v')
@@ -59,3 +46,4 @@ main = do
             ]
     bondAngles = collectBondAngles bonds
     bondTorsAngles = collectBondTorsAngles bondAngles
+    ms = (atoms,bonds,bondAngles,bondTorsAngles)

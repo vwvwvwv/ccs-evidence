@@ -148,3 +148,10 @@ replaceAtomInBondTorsAngles a a' btas =
                                    let t' = if u' == a then a' else u',
                                    let t'' = if u'' == a then a' else u'',
                                    let t''' = if u''' == a then a' else u''']
+
+replaceAtomInMolecularSystem :: Atom -> Atom -> MolecularSystem -> MolecularSystem
+replaceAtomInMolecularSystem a a' (atoms, bonds, bondAngles, bondTorsAngles) =
+    (replaceAtomInAtoms a a' atoms,
+    replaceAtomInBonds a a' bonds, 
+    replaceAtomInBondAngles a a' bondAngles, 
+    replaceAtomInBondTorsAngles a a' bondTorsAngles)
