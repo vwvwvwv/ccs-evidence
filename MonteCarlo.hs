@@ -3,7 +3,6 @@ module MonteCarlo where
 import Geometry
 import MolMec
 import System.Random
-import Data.List (delete)
 
 type SystemState = ((Double, StdGen), MolecularSystem)
 
