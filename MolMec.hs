@@ -5,11 +5,16 @@ import Data.List (nub, delete, (\\))
 import Data.Maybe (fromJust, isNothing)
 
 data Atom = Atom 
-    { pos :: Vector      -- ^ The position of the atom.
+    { elementName :: String
+    , pos :: Vector      -- ^ The position of the atom.
     , charge :: Double   -- ^ The electro-static charge of the atom.
     , radius :: Double   -- ^ The Van Der-Waals radius of the atom.
     , atomId :: Integer  -- ^ The unique ID of the atom.
-    } deriving (Show, Eq)
+    } deriving (Show)
+
+-- | Test atoms equivalence through their IDs.
+instance Eq Atom where
+  (==) a a' = (atomId a) == (atomId a')
 
 -- | Allow atoms to be sorted by their ID.
 instance Ord Atom where
@@ -28,6 +33,22 @@ data BondTorsAngle = BondTorsAngle Atom Atom Atom Atom
                    deriving (Show, Eq)
 
 type MolecularSystem = ([Atom], [Bond], [BondAngle], [BondTorsAngle])
+
+displayMolecularSystem :: MolecularSystem -> IO ()
+displayMolecularSystem = putStrLn . unlines . ppMolecularSystem
+
+ppMolecularSystem :: MolecularSystem -> [String]
+ppMolecularSystem (atoms, [], _, _) =
+    (map ppAtom atoms) ++ ["There are no bonds."]
+ppMolecularSystem (atoms, bonds, _, _) = 
+    (map ppAtom atoms) ++ (map ppBond bonds)
+
+ppAtom :: Atom -> String
+ppAtom a = (show (atomId a)) ++ " " ++ (show (elementName a)) ++ " " ++
+    (ppVector (pos a)) ++ " " ++ (show (radius a)) ++ " " ++ (show (charge a))
+
+ppBond :: Bond -> String
+ppBond (Bond a a') = (show (atomId a)) ++ " ----- " ++ (show (atomId a'))
 
 -- | Calculate the amount of energy made by through the Van Der-Waals effect
 -- between two atoms. This causes atoms to become like ``soft-spheres'' that
@@ -161,8 +182,12 @@ replaceAtomInAtoms a a' as = a':(delete a as)
 
 -- | Replace all instances of an Atom in a list of Bonds.
 replaceAtomInBonds :: Atom -> Atom -> [Bond] -> [Bond]
-replaceAtomInBonds a a' bs = [Bond a' a'' | (Bond t t') <- bs, a `elem` [t,t'], 
-                                let a'' = if a == t then t' else t]
+replaceAtomInBonds a a' bs = [b | (Bond t t') <- bs,
+                                let b = if a == t || a == t'
+                                          then if a == t 
+                                                 then (Bond a' t')
+                                                 else (Bond a' t)
+                                          else (Bond t t')]
 
 -- | Replace all instances of an Atom in a list of BondAngles.
 replaceAtomInBondAngles :: Atom -> Atom -> [BondAngle] -> [BondAngle]

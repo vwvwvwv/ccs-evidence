@@ -80,3 +80,7 @@ measureTorsAngle (TorsAngle v v' v'' v''') =
   where
     a = (v'@-v) @# (v''@-v)
     b = (v'@-v''') @# (v''@-v''')
+
+ppVector :: Vector -> String
+ppVector (Vector x x' x'') = 
+      "[" ++ (show x) ++ ", " ++ (show x') ++ ", " ++ (show x'') ++ "]"

@@ -8,7 +8,7 @@ type SystemState = ((Double, StdGen), MolecularSystem)
 
 monteCarloStep :: MolecularSystem -> StdGen -> SystemState
 monteCarloStep ms@(atoms,_,_,_) g =
-    ((totalEnergy ms', g'), ms')
+    ((totalEnergy ms', g''), ms')
   where
     (r,g')   = randomR (0, (length atoms)-1) g
     (r',g'') = randomVector g'
