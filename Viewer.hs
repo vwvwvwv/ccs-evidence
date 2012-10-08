@@ -1,8 +1,9 @@
 module Viewer where
 
-import Main
 import Geometry
 import MolMec
+import MonteCarlo
+import Main
 import Graphics.UI.GLUT
 import Data.IORef
 
