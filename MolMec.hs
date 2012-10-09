@@ -10,11 +10,7 @@ data Atom = Atom
     , charge :: Double   -- ^ The electro-static charge of the atom.
     , radius :: Double   -- ^ The Van Der-Waals radius of the atom.
     , atomId :: Integer  -- ^ The unique ID of the atom.
-    } deriving (Show)
-
--- | Test atoms equivalence through their IDs.
-instance Eq Atom where
-  (==) a a' = (atomId a) == (atomId a')
+    } deriving (Show, Eq)
 
 -- | Allow atoms to be sorted by their ID.
 instance Ord Atom where
@@ -40,7 +36,7 @@ displayMolecularSystem = putStrLn . unlines . ppMolecularSystem
 ppMolecularSystem :: MolecularSystem -> [String]
 ppMolecularSystem (atoms, [], _, _) =
     (map ppAtom atoms) ++ ["There are no bonds."]
-ppMolecularSystem (atoms, bonds, _, _) = 
+ppMolecularSystem (atoms, bonds, _, _) =
     (map ppAtom atoms) ++ (map ppBond bonds)
 
 ppAtom :: Atom -> String
@@ -191,19 +187,29 @@ replaceAtomInBonds a a' bs = [b | (Bond t t') <- bs,
 
 -- | Replace all instances of an Atom in a list of BondAngles.
 replaceAtomInBondAngles :: Atom -> Atom -> [BondAngle] -> [BondAngle]
-replaceAtomInBondAngles a a' bas = [BondAngle t t' t'' | (BondAngle u u' u'') <- bas,
-                                      let t = if u == a then a' else u,
-                                      let t' = if u' == a then a' else u',
-                                      let t'' = if u'' == a then a' else u'']
+replaceAtomInBondAngles a a' bas = 
+    [ba | (BondAngle u u' u'') <- bas,
+      let ba = if u == a 
+                 then (BondAngle a' u' u'') 
+                 else if u' == a
+                        then (BondAngle u a' u'')
+                        else if u'' == a
+                               then (BondAngle u u' a')
+                               else (BondAngle u u' u'')]
 
 -- | Replace all instances of an Atom in a list of BondTorsAngles.
 replaceAtomInBondTorsAngles :: Atom -> Atom -> [BondTorsAngle] -> [BondTorsAngle]
 replaceAtomInBondTorsAngles a a' btas = 
-    [BondTorsAngle t t' t'' t''' | (BondTorsAngle u u' u'' u''') <- btas,
-                                   let t = if u == a then a' else u,
-                                   let t' = if u' == a then a' else u',
-                                   let t'' = if u'' == a then a' else u'',
-                                   let t''' = if u''' == a then a' else u''']
+    [bta | (BondTorsAngle u u' u'' u''') <- btas,
+      let bta = if u == a
+                  then (BondTorsAngle a' u' u'' u''')
+                  else if u' == a
+                         then (BondTorsAngle u a' u'' u''')
+                         else if u'' == a
+                                then (BondTorsAngle u u' a' u''')
+                                else if u''' == a
+                                       then (BondTorsAngle u u' u'' a')
+                                       else (BondTorsAngle u u' u'' u''')]
 
 -- | Replace all instances of an 'Atom' in a 'MolecularSystem'.
 replaceAtomInMolecularSystem :: Atom -> Atom -> MolecularSystem -> MolecularSystem
