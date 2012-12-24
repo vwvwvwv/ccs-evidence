@@ -53,15 +53,3 @@ main = do
     ms                 = (atoms,bonds,bondAngles,bondTorsAngles)
     numberOfIterations = 10000
     seed               = 4
-
-{-
-atoms = [ Atom {elementName="A",pos=Vector 0 0 0,charge=0,radius=1,atomId=1}
-        , Atom {elementName="A",pos=Vector 1 0 0,charge=0,radius=1,atomId=2}
-        , Atom {elementName="A",pos=Vector 2 2 2,charge=0,radius=1,atomId=3}
-        , Atom {elementName="B",pos=Vector 5 5 3,charge=1,radius=1.5,atomId=4}
-        ]
-
-bonds = [ Bond (atoms!!0) (atoms!!1)
-        , Bond (atoms!!0) (atoms!!2)
-        ]
--}
