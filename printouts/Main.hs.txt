@@ -1,0 +1,55 @@
+    0   module Main where
+    1   
+    2   import Geometry
+    3   import MolMec
+    4   import MonteCarlo
+    5   import System.Random (mkStdGen)
+    6   
+    7   oxygen = Atom { elementName = "O"
+    8                 , mass        = 15.999
+    9                 , charge      = 0
+   10                 , radius      = 1.52
+   11                 , pos         = Vector 0 0 0
+   12                 , atomId      = 1
+   13                 }
+   14   
+   15   hydrogen = Atom { elementName = "H"
+   16                   , mass        = 1.008
+   17                   , charge      = 0
+   18                   , radius      = 1.2
+   19                   , pos         = Vector 0 0 0
+   20                   , atomId      = 1
+   21                   }
+   22   
+   23   -- Our system: H2O and O2, placed more or less randomly.
+   24   atoms = [ oxygen   { pos = Vector 1.0 2.0 3.0, atomId = 0 }
+   25           , hydrogen { pos = Vector 2.0 3.0 1.0, atomId = 1 }
+   26           , hydrogen { pos = Vector 0.0 0.0 2.0, atomId = 2 }
+   27           , oxygen   { pos = Vector 4.0 0.0 0.0, atomId = 3 }
+   28           , oxygen   { pos = Vector 2.0 0.0 0.0, atomId = 4 }
+   29           ]
+   30   
+   31   bonds = [ Bond (atoms!!0) (atoms!!1)
+   32           , Bond (atoms!!0) (atoms!!2)
+   33           , Bond (atoms!!3) (atoms!!4)
+   34           ]
+   35   
+   36   main :: IO ()
+   37   main = do
+   38       v <- return $ totalEnergy ms
+   39       displayMolecularSystem ms
+   40       putStrLn " Total energy: (before) "
+   41       putStrLn (show v)
+   42       putStrLn ""
+   43       putStrLn $ " Calculating " ++ (show numberOfIterations) ++ " iterations..."
+   44       ((v', g'), ms') <- return $ monteCarlo ms numberOfIterations (mkStdGen seed)
+   45       putStrLn ""
+   46       displayMolecularSystem ms'
+   47       putStrLn " Total energy: (after) "
+   48       putStrLn (show v')
+   49     where
+   50       bondAngles         = collectBondAngles bonds
+   51       bondTorsAngles     = collectBondTorsAngles bondAngles
+   52       ms                 = (atoms,bonds,bondAngles,bondTorsAngles)
+   53       numberOfIterations = 10000
+   54       seed               = 4

@@ -1,0 +1,221 @@
+    0   module MolMec where
+    1   
+    2   import Geometry
+    3   import Data.List (nub, delete, (\\))
+    4   import Data.Maybe (fromJust, isNothing)
+    5   
+    6   data Atom = Atom 
+    7       { elementName :: String
+    8       , pos :: Vector      -- ^ The position of the atom.
+    9       , charge :: Double   -- ^ The electro-static charge of the atom.
+   10       , radius :: Double   -- ^ The Van Der-Waals radius of the atom.
+   11       , atomId :: Integer  -- ^ The unique ID of the atom.
+   12       , mass :: Double
+   13       } deriving (Show, Eq)
+   14   
+   15   -- | Allow atoms to be sorted by their ID.
+   16   instance Ord Atom where
+   17     (<=) a a' = (atomId a) <= (atomId a')
+   18   
+   19   data Bond = Bond Atom Atom
+   20             deriving (Show, Eq)
+   21   
+   22   -- | BondAngles are analogous to Angles in Geometry.hs, but are instead
+   23   -- made of atoms.
+   24   data BondAngle = BondAngle Atom Atom Atom
+   25                  deriving (Show, Eq)
+   26   
+   27   -- | BondTorsAngles are analogous to TorsAngles in Geometry.hs.
+   28   data BondTorsAngle = BondTorsAngle Atom Atom Atom Atom
+   29                      deriving (Show, Eq)
+   30   
+   31   type MolecularSystem = ([Atom], [Bond], [BondAngle], [BondTorsAngle])
+   32   
+   33   displayMolecularSystem :: MolecularSystem -> IO ()
+   34   displayMolecularSystem = putStrLn . unlines . ppMolecularSystem
+   35   
+   36   ppMolecularSystem :: MolecularSystem -> [String]
+   37   ppMolecularSystem (atoms, [], _, _) =
+   38       (map ppAtom atoms) ++ ["There are no bonds."]
+   39   ppMolecularSystem (atoms, bonds, _, _) =
+   40       (map ppAtom atoms) ++ (map ppBond bonds)
+   41   
+   42   ppAtom :: Atom -> String
+   43   ppAtom a = (show (atomId a)) ++ " " ++ (show (elementName a)) ++ " " ++
+   44       (ppVector (pos a)) ++ " " ++ (show (radius a)) ++ " " ++ (show (charge a))
+   45   
+   46   ppBond :: Bond -> String
+   47   ppBond (Bond a a') = (show (atomId a)) ++ " ----- " ++ (show (atomId a'))
+   48   
+   49   -- | Calculate the amount of energy made by through the Van Der-Waals effect
+   50   -- between two atoms. This causes atoms to become like ``soft-spheres'' that
+   51   -- are slightly attracted when at their radii touch and are quickly repelled
+   52   -- when they overlap.
+   53   vanDerWaals :: Atom -> Atom -> Double
+   54   vanDerWaals a a' = if r == 0 then 0 else 4*((1/r)^(12) - (1/r)^(6))
+   55     where
+   56       r = distance (pos a) (pos a')
+   57   
+   58   -- | Calculate the amount of energy created by the stretching or contracting
+   59   -- of a bond. As in common in classical molecular mechanics, it is modeled as
+   60   -- a simple spring.
+   61   stretchEnergy :: Bond -> Double
+   62   stretchEnergy (Bond a a') = (k*(d-d0)^2)/2
+   63     where
+   64       k = 2.5 -- the ``stiffness'' of the bonds
+   65       d = distance (pos a) (pos a')
+   66       d0 = (radius a) + (radius a')
+   67   
+   68   -- | Calculate the amount of energy created by the angles of bonds.
+   69   bendEnergy :: BondAngle -> Double
+   70   bendEnergy b = (k*(theta-theta0)^2)/2
+   71     where
+   72       k = 2.5 -- the ``stiffness'' of the bond angles
+   73       theta = measureBondAngle b
+   74       theta0 = 2*pi/3 -- the angle at rest
+   75   
+   76   -- | Calculate the amount of energy created by the rotation of atoms along a
+   77   -- spine, such as in chains of hydrocarbons.
+   78   torsionalEnergy :: BondTorsAngle -> Double
+   79   torsionalEnergy b = torsBarrier*(1+s*(cos(n*phi)))/2
+   80     where
+   81       torsBarrier = 1 -- please look this up again
+   82       s = 1 -- s = 1 or s = -1 (means it is conformational or eclipsed)
+   83       n = 3 -- periodicity (the number of maxima per full revolution)
+   84       phi = measureBondTorsAngle b
+   85   
+   86   -- | Calculate the Coulomb effect between pairs of atoms.
+   87   electroStaticEnergy :: Atom -> Atom -> Double
+   88   electroStaticEnergy a a' = q*q'/k*r
+   89     where
+   90       q = charge a
+   91       q' = charge a'
+   92       k = 20    -- dielectric of the medium between interacting charges,
+   93                 -- approximated between vacuum [k=1] and water [k=80]
+   94       r = distance (pos a) (pos a')
+   95   
+   96   -- | Calculate the total energy of the system.
+   97   totalEnergy :: MolecularSystem -> Double
+   98   totalEnergy (as, bs, bas, btas) = stretch + bend + tors + vdw + elec
+   99     where
+  100       stretch = sum . map stretchEnergy $ bs
+  101       bend = sum . map bendEnergy $ bas
+  102       tors = sum . map torsionalEnergy $ btas
+  103       vdw = sum [ vanDerWaals a a' | a <- as, a' <- as, not $ a > a' ]
+  104       elec = sum [ electroStaticEnergy a a' | a <- as, a' <- as, not $ a > a' ]
+  105   
+  106   -- | Convert a BondAngle into an Angle and find its measure.
+  107   measureBondAngle :: BondAngle -> Double
+  108   measureBondAngle (BondAngle a a' a'') = measureAngle (Angle v v' v'')
+  109     where
+  110       v = pos a
+  111       v' = pos a'
+  112       v'' = pos a''
+  113   
+  114   -- | Convert a BondTorsAngle into a TorsAngle and find its measure.
+  115   measureBondTorsAngle :: BondTorsAngle -> Double
+  116   measureBondTorsAngle (BondTorsAngle a a' a'' a''') = 
+  117       measureTorsAngle (TorsAngle v v' v'' v''')
+  118     where
+  119       v = pos a
+  120       v' = pos a'
+  121       v'' = pos a''
+  122       v''' = pos a'''
+  123   
+  124   -- | Try to create a BondAngle from two Bonds. In order for this to work,
+  125   -- there must be exactly one atom that is the same in both bonds. Currently,
+  126   -- this is not as safe as it could be, so try not to use it much.
+  127   formBondAngle :: Bond -> Bond -> Maybe BondAngle
+  128   formBondAngle b@(Bond u u') b'@(Bond v v') =
+  129       if null same then Nothing
+  130         else let (a':[]) = same
+  131                  (a:a'':[]) = as' \\ [a']
+  132              in Just $ BondAngle a a' a''
+  133     where
+  134       as = [u,u',v,v']
+  135       as' = nub as
+  136       same = as \\ as'
+  137   
+  138   -- | Find all of the angles made by bonds in a list of Bond. This is usually
+  139   -- done at the beginning of a simulation, and then never called again.
+  140   collectBondAngles :: [Bond] -> [BondAngle]
+  141   collectBondAngles bonds = 
+  142       [ ba | b <- bonds, b' <- bonds, b /= b',
+  143         let mba = formBondAngle b b', not $ isNothing mba,
+  144         let ba@(BondAngle a _ a'') = fromJust mba,
+  145         not $ a > a'' ]
+  146   
+  147   -- | Attempt to create a torsional angle from two BondAngles. This code is
+  148   -- currently a mess, and almost certainly has a bug or two.
+  149   formBondTorsAngle :: BondAngle -> BondAngle -> Maybe BondTorsAngle
+  150   formBondTorsAngle b@(BondAngle u u' u'') b'@(BondAngle v v' v'') =
+  151       if null same then Nothing
+  152         else let (t:t':[]) = same
+  153                  (a:a''':[]) = as' \\ [t,t']
+  154              in -- this monstrosity
+  155                if (t == u && t == v) then Just $ BondTorsAngle u'' u'  v'  v''
+  156                  else if (t == u'' && t == v'') then Just $ BondTorsAngle u'  u'' v'' v'
+  157                    else if (t == u   && t == v'') then Just $ BondTorsAngle u'' u'  v'' v'
+  158                      else if (t == u'' && t == v) then Just $ BondTorsAngle u'  u'' v'  v''
+  159                        else error "Something is terribly wrong in formBondTorsAngle"
+  160     where
+  161       as = [u,u',u'',v,v',v'']
+  162       as' = nub as
+  163       same = as \\ as'
+  164   
+  165   -- | Find all of the torsional angles made by angles in a list of Angle. As
+  166   -- with ``collectBondAngles'', this is usually called at the beginning and
+  167   -- then its results are used for the remainder of the time.
+  168   collectBondTorsAngles :: [BondAngle] -> [BondTorsAngle]
+  169   collectBondTorsAngles bondAngles =
+  170       [ bta | ba <- bondAngles, ba' <- bondAngles, ba /= ba',
+  171         let mbta = formBondTorsAngle ba ba', not $ isNothing mbta,
+  172         let bta@(BondTorsAngle a _ _ a''') = fromJust mbta,
+  173         not $ a > a''' ]
+  174   
+  175   -- | Replace an Atom in a list of Atoms.
+  176   replaceAtomInAtoms :: Atom -> Atom -> [Atom] -> [Atom]
+  177   replaceAtomInAtoms a a' as = a':(delete a as)
+  178   
+  179   -- | Replace all instances of an Atom in a list of Bonds.
+  180   replaceAtomInBonds :: Atom -> Atom -> [Bond] -> [Bond]
+  181   replaceAtomInBonds a a' bs = [b | (Bond t t') <- bs,
+  182                                   let b = if a == t || a == t'
+  183                                             then if a == t 
+  184                                                    then (Bond a' t')
+  185                                                    else (Bond a' t)
+  186                                             else (Bond t t')]
+  187   
+  188   -- | Replace all instances of an Atom in a list of BondAngles.
+  189   replaceAtomInBondAngles :: Atom -> Atom -> [BondAngle] -> [BondAngle]
+  190   replaceAtomInBondAngles a a' bas = 
+  191       [ba | (BondAngle u u' u'') <- bas,
+  192         let ba = if u == a 
+  193                    then (BondAngle a' u' u'') 
+  194                    else if u' == a
+  195                           then (BondAngle u a' u'')
+  196                           else if u'' == a
+  197                                  then (BondAngle u u' a')
+  198                                  else (BondAngle u u' u'')]
+  199   
+  200   -- | Replace all instances of an Atom in a list of BondTorsAngles.
+  201   replaceAtomInBondTorsAngles :: Atom -> Atom -> [BondTorsAngle] -> [BondTorsAngle]
+  202   replaceAtomInBondTorsAngles a a' btas = 
+  203       [bta | (BondTorsAngle u u' u'' u''') <- btas,
+  204         let bta = if u == a
+  205                     then (BondTorsAngle a' u' u'' u''')
+  206                     else if u' == a
+  207                            then (BondTorsAngle u a' u'' u''')
+  208                            else if u'' == a
+  209                                   then (BondTorsAngle u u' a' u''')
+  210                                   else if u''' == a
+  211                                          then (BondTorsAngle u u' u'' a')
+  212                                          else (BondTorsAngle u u' u'' u''')]
+  213   
+  214   -- | Replace all instances of an 'Atom' in a 'MolecularSystem'.
+  215   replaceAtomInMolecularSystem :: Atom -> Atom -> MolecularSystem -> MolecularSystem
+  216   replaceAtomInMolecularSystem a a' (atoms, bonds, bondAngles, bondTorsAngles) =
+  217       (replaceAtomInAtoms a a' atoms,
+  218       replaceAtomInBonds a a' bonds, 
+  219       replaceAtomInBondAngles a a' bondAngles, 
+  220       replaceAtomInBondTorsAngles a a' bondTorsAngles)

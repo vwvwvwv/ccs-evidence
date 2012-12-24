@@ -1,0 +1,86 @@
+    0   module Geometry where
+    1   
+    2   import System.Random
+    3   
+    4   data Vector = Vector Double Double Double
+    5               deriving (Show, Eq)
+    6   
+    7   -- | The middle vector is always the angle's point.
+    8   data Angle = Angle Vector Vector Vector
+    9               deriving (Show, Eq)
+   10   
+   11   -- | Represents a torsional angle, which is essentially two angles that share 
+   12   -- an edge.
+   13   data TorsAngle = TorsAngle Vector Vector Vector Vector
+   14               deriving (Show, Eq)
+   15   
+   16   vector0 :: Vector
+   17   vector0 = Vector 0 0 0
+   18   
+   19   -- | Returns a random vector with each of its indicies in the half-open
+   20   -- interval [0, 1)
+   21   randomVector :: RandomGen g => g -> (Vector, g)
+   22   randomVector g = (Vector r r' r'', g''')
+   23     where
+   24       (r, g') = random g
+   25       (r', g'') = random g'
+   26       (r'', g''') = random g''
+   27   
+   28   -- | Wrap a function that takes doubles to work on vectors
+   29   wrapVector :: (Double -> Double -> Double) -> Vector -> Vector -> Vector
+   30   wrapVector f (Vector x x' x'') (Vector y y' y'') = 
+   31       Vector (f x y) (f x' y') (f x'' y'')
+   32   
+   33   -- | Add two vectors.
+   34   (@+) :: Vector -> Vector -> Vector 
+   35   (@+) = wrapVector (+)
+   36   
+   37   -- | Subtract two vectors.
+   38   (@-) :: Vector -> Vector -> Vector
+   39   (@-) = wrapVector (-)
+   40   
+   41   -- | Simple multiplication of two vectors.
+   42   (@*) :: Vector -> Vector -> Vector 
+   43   (@*) = wrapVector (*)
+   44   
+   45   -- | Simple division of two vectors.
+   46   (@/) :: Vector -> Vector -> Vector
+   47   (@/) = wrapVector (/)
+   48   
+   49   -- | Dot product of two vectors.
+   50   (@.) :: Vector -> Vector -> Double
+   51   (@.) (Vector x x' x'') (Vector y y' y'') = x*y + x'*y' + x''*y''
+   52   
+   53   -- | Cross product of two vectors.
+   54   (@#) :: Vector -> Vector -> Vector
+   55   (@#) (Vector x x' x'') (Vector y y' y'') = 
+   56       Vector (x'*y''-x''*y') (x''*y-x*y'') (x*y'-x'*y)
+   57   
+   58   -- | Calculate the distance between two vectors acting as points.
+   59   distance :: Vector -> Vector -> Double
+   60   distance v v' = sqrt $ v @. v'
+   61   
+   62   -- | Find the length of a vector.
+   63   magnitude :: Vector -> Double
+   64   magnitude v = distance v v
+   65   
+   66   -- | Calculate the measure of the angle made by three vectors acting as points.
+   67   measureAngle :: Angle -> Double
+   68   measureAngle (Angle v v' v'') =
+   69       asin $ (magnitude (a @# b)) / ((magnitude a) * (magnitude b))
+   70     where
+   71       a = v @- v'
+   72       b = v'' @- v'
+   73   
+   74   -- | Calculate the measure of the torsional angle made by four vectors acting
+   75   -- as points.
+   76   measureTorsAngle :: TorsAngle -> Double
+   77   measureTorsAngle (TorsAngle v v' v'' v''') = 
+   78       asin $ (magnitude (a @# b)) / ((magnitude a) * (magnitude b))
+   79     where
+   80       a = (v'@-v) @# (v''@-v)
+   81       b = (v'@-v''') @# (v''@-v''')
+   82   
+   83   ppVector :: Vector -> String
+   84   ppVector (Vector x x' x'') = 
+   85         "[" ++ (show x) ++ ", " ++ (show x') ++ ", " ++ (show x'') ++ "]"

@@ -1,0 +1,9 @@
+    0   #!/usr/bin/env ruby
+    1   
+    2   MAXDIGITS = 5
+    3   LEFTCOLUMN = 3
+    4   i = 0
+    5   ARGF.each do |line|
+    6     puts i.to_s.rjust(MAXDIGITS) + " " * LEFTCOLUMN + line
+    7     i += 1
+    8   end

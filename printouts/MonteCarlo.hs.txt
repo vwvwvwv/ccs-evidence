@@ -1,0 +1,28 @@
+    0   module MonteCarlo where
+    1   
+    2   import Geometry
+    3   import MolMec
+    4   import System.Random
+    5   
+    6   type SystemState = ((Double, StdGen), MolecularSystem)
+    7   
+    8   monteCarloStep :: MolecularSystem -> StdGen -> SystemState
+    9   monteCarloStep ms@(atoms,_,_,_) g =
+   10       ((totalEnergy ms', g''), ms')
+   11     where
+   12       (r,g')   = randomR (0, (length atoms)-1) g
+   13       (r',g'') = randomVector g'
+   14       a        = atoms !! r
+   15       a'       = a { pos = (pos a) @+ r' }
+   16       ms'      = replaceAtomInMolecularSystem a a' ms
+   17   
+   18   monteCarlo :: MolecularSystem -> Integer -> StdGen -> SystemState
+   19   monteCarlo ms iterations g =
+   20       loop ms g iterations
+   21     where
+   22       loop :: MolecularSystem -> StdGen -> Integer -> SystemState
+   23       loop ms g 0 = ((totalEnergy ms, g), ms)
+   24       loop ms g n = if (v'-v) < 0 then loop ms' g' (n-1) else loop ms g' (n-1)
+   25         where
+   26           v = totalEnergy ms
+   27           ((v', g'), ms') = monteCarloStep ms g
