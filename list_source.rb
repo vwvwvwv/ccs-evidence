@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 MAXDIGITS = 5
 LEFTCOLUMN = 3
 i = 0
