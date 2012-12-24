@@ -10,6 +10,7 @@ data Atom = Atom
     , charge :: Double   -- ^ The electro-static charge of the atom.
     , radius :: Double   -- ^ The Van Der-Waals radius of the atom.
     , atomId :: Integer  -- ^ The unique ID of the atom.
+    , mass :: Double
     } deriving (Show, Eq)
 
 -- | Allow atoms to be sorted by their ID.
